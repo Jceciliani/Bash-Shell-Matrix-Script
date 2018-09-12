@@ -1,0 +1,453 @@
+#!/bin/bash
+#Author: Josh Ceciliani
+#Program: Program 1
+#Date: 7/9/2018
+
+#Dim***********************************************************
+dims(){
+#Error Handling
+if [ "$#" = "1" ] 
+then	
+#Initilize variables
+rowcount=0
+#While loop to read in data from file
+while read myLine
+do
+	colcount=0
+#Count number of rows and cols using while loop	
+	for i in $myLine
+	do
+		((colcount++))
+	done
+	rowcount=$(expr $rowcount + 1)
+
+done < $1
+#Print row and col count to stdout - Exit 0	
+	echo "$rowcount $colcount"
+	exit 0
+#Too many files - Error Exit 1
+else
+	echo "Too few/many arguments" 1>&2
+	exit 1
+fi
+
+}
+#Mean******************************************************
+mean(){
+#Error Handling
+if [ "$#" = "1" ]
+then
+#Create temp files
+temp="temp"
+temprow="temprow"
+avgFile="avgFile"
+fileOutput="fileoutput"
+#While loop to read in data from file and place in new tempfile
+while read myLine
+do
+	echo "$myLine" >> $temp
+done < $1
+#Get Col Count
+while read colFile
+do
+	colCount=0
+	for i in $colFile
+	do
+		((colCount++))
+	done
+
+done <$temp
+#increase Col count by 1
+((colCount++))
+#Transpose file
+	for ((i = 1; i < colCount; i++)) 
+	do
+		cut -f $i $temp | tr '\n' '\t' >> $temprow
+		echo >> $temprow
+		truncate -s-2 $temprow
+		echo >> $temprow
+	done
+
+#Loop through new data - create sum and count of each row, divide sum/count to get avg of row 
+while read tempFile
+do
+	count=0
+	sum=0
+	avg=0
+#Loop through each element in the row 
+	for i in $tempFile	
+	do
+		((count++))
+		sum=$(expr $sum + $i)
+	done
+#Calculate the average
+	if [ "$sum" -ge 0 ]; then
+	dividedCount=$(($count / 2))
+	negDividedCount=$(($dividedCount *(1)))
+	sumDivide=$(($sum + $negDividedCount))
+	avg=$((sumDivide / $count))
+	
+	#echo "divideCount: $dividedCount"
+	#echo "negDividedCount: $negDividedCount"
+	#echo "sumDivide: $sumDivide"
+	#echo "avg: $avg"
+	echo "$avg" >> $avgFile
+
+	elif [ "$sum" -lt 0 ]; then
+	dividedCount=$(($count / 2))
+	negDividedCount=$(($dividedCount *(-1)))
+	sumDivide=$(($sum + $negDividedCount))
+	avg=$((sumDivide / $count))
+	
+	#echo "divideCount: $dividedCount"
+	#echo "negDividedCount: $negDividedCount"
+	#echo "sumDivide: $sumDivide"
+	#echo "avg: $avg"
+	echo "$avg" >> $avgFile
+	fi
+	
+#Go to next row, if there is one
+done < $temprow
+#Put Col file into row File
+cat $avgFile | tr '\n' '\t' > $fileOutput
+truncate -s-1 $fileOutput
+echo >> "$fileOutput"
+cat "$fileOutput"
+#Remove temp file and exit 0
+	rm -f fileoutput
+	rm -f temp
+	rm -f temprow
+	rm -f avgFile
+	exit 0
+#Too many files - Error exit 1
+else
+	echo "Too few/many files" 1>&2
+	exit 1
+fi
+
+}
+#Transpose*******************************************
+transpose(){
+#Error Handling
+if [ "$#" = "1" ] 
+then
+#Create temp files
+temp="temp"
+temprow="temprow"
+#While loop to read in from file
+while
+	read file1_line 0<&3
+do
+	echo "$file1_line" >> $temp
+done 3<$1
+#Make sure it echo'd to the file properly
+
+while read colFile
+do
+	colCount=0
+	for i in $colFile
+	do
+		((colCount++))
+	done
+
+done <$temp
+
+((colCount++))
+#Transpose file
+	for ((i = 1; i < colCount; i++)) 
+	do
+		cut -f $i $temp | tr '\n' '\t' >> $temprow
+		echo >> $temprow
+		truncate -s-2 $temprow
+		echo >> $temprow
+	done
+#Print out new transpose
+#truncate -s-2 $temprow
+#echo >> $temprow
+cat "$temprow"
+#Remove temp files - Exit 0
+	rm -f temp
+	rm -f temprow
+	exit 0
+#Too many files - Error exit 1
+else
+	echo "Error"
+	exit 1
+fi
+}
+
+#Add*************************************************
+add(){
+#Error Handling
+if [ "$#" = "2" ]
+then
+#Create temp files
+mat1="m1"
+mat2="m2"
+newMat1="newmat1"
+newMat2="newmat2"
+newMat="newmat"
+addFile="addFile"
+total="total"
+final="final"
+
+#while loop to read in from both files - place in temp files
+while
+	read file1_line 0<&3
+	read file2_line 0<&4
+do
+	for i in $file1_line
+	do
+		echo $i >> $mat1
+	done
+	for j in $file2_line
+	do
+		echo $j >> $mat2
+	done
+done 3<$1 4<$2
+#Cat both lines into one big line
+#cat $mat1
+#cat $mat2
+
+#Get original matrix for printing
+
+while read printFile
+do
+	printCol=0
+	for i in $printFile
+	do
+		((printCol++))
+	done
+
+done < $1
+
+
+cat $mat1 | tr '\n' '\t' > $newMat1
+cat $mat2 | tr '\n' '\t' > $newMat2
+#Give newMat2 a newline
+echo >> $newMat2	
+#Append newMat1 into newMat2
+cat $newMat1 >> $newMat2
+#Newline in newMat2
+echo >> $newMat2
+
+#echo "new Mat2"
+#cat $newMat2
+
+#Get column count for newMat 2
+while read newFile
+do
+	colCount=0
+	for i in $newFile
+	do
+		((colCount++))
+	done
+
+done < $newMat2
+((colCount++))
+
+
+#Parse data into rows from columns
+	for ((i = 1; i < colCount; i++)) 
+	do
+		cut -f $i $newMat2 | tr '\n' '\t' >> $newMat
+		echo >> $newMat
+		truncate -s-2 $newMat
+		echo >> $newMat
+	done
+
+
+#find newMat columns
+while read newerMatrix
+do
+	newColCount=0
+	for i in $newerMatrix
+	do
+		((newColCount++))
+	done
+done < $newMat
+
+#cat $newMat
+
+#echo "Col Count: $colCount"
+#echo "New ColCount: $newColCount" 
+#Caluclate sum of each row
+tab=1
+while read matrix
+do
+	sum=0
+	for i in $matrix
+	do
+		sum=$(expr  $sum + $i)
+	done
+
+	if [ $printCol == $tab ]; then
+		printf "%d\n" $sum
+		tab=1
+	elif [ $printCol -gt $tab ]; then
+		printf "%d\t" $sum
+		((tab++))
+	fi
+
+done < $newMat
+
+#Cat out add File data
+#echo "Add File"
+#cat $addFile 
+
+
+#cat $addFile | tr '\n' '\t' > $total
+#truncate -s-1 $total
+#echo >> $total
+
+
+#echo "Total File"
+#cat $total
+
+#Attempt to change back into same row/col as input
+	#for ((i = 1; i < colCount; i++)) 
+	#do
+	#	cut -f $i $total | tr '\t' '\n' >> $final
+#		echo >> $final
+#		truncate -s-2 $final
+#		echo >> $final
+#	done
+#echo "Final File"
+#cat $final
+
+#cat $total
+#Remove temp files - Exit 0
+	rm -f m1 
+	rm -f m2
+	rm -f newmat1
+	rm -f newmat2
+	rm -f newmat
+	exit 0
+#Too many files - Error Exit 1
+else
+	echo "Too few/many files" 1>&2
+	exit 1
+fi
+}
+#Multiply*************************************************
+multiply(){
+if [ "$#" = "2" ]
+then
+#Create temp files
+mat1="m1"
+mat2="m2"
+newmat2="newmat2"
+temp1="temp1"
+temp2="temp2"
+
+#while loop to read in from both files - place in temp files
+while
+	read file1_line 0<&3
+	#read file2_line 0<&4
+do
+	echo $file1_line >> $mat1
+	#echo $file2_line >> $mat2
+done 3<$1 #4<$2
+
+
+while read colFile
+do
+	colCount=0
+	for i in $colFile
+	do
+		((colCount++))
+	done
+
+done <$2
+
+((colCount++))
+#Transpose file
+	for ((i = 1; i < colCount; i++)) 
+	do
+		cut -f $i $2 | tr '\n' '\t' >> $newmat2
+		echo >> $newmat2
+		truncate -s-2 $newmat2
+		echo >> $newmat2
+	done
+#Print out new transpose
+#truncate -s-1 $mat1
+cat $newmat2
+
+while read tempFile
+do
+	matColCount=0
+	for i in $tempFile
+	do
+		((matColCount++))
+	done
+
+done <$1
+
+((matColCount++))
+
+echo "Count: $matColCount"
+
+cat -A $newmat2
+cat -A $1
+
+#cat $testmat
+echo "Entering loop"
+#While reading first matrix line by line
+while read matrix1
+do
+
+	echo "Matrix1 Line: $matrix1"
+	sum=0
+	product=0
+	#While reading second matrix(transposed) line by line	
+	while read matrix2
+	do
+		echo "Matrix2 Line: $matrix2"
+		for ((i = 1; i < matColCount; i++))
+		do
+			echo $matrix1 > $temp1
+			echo $matrix2 > $temp2
+			var1=$(cut -f $i $temp1) 
+			var2=$(cut -f $i $temp2)
+			
+			echo "Var1: $var1"
+			echo "Var2: $var2"
+
+			#product=$(expr $var1 * $var2)
+			#sum=$(( $sum + $product))
+		done
+		
+	done <$newmat2
+
+	echo "Product: $sum"	
+
+done <$1
+echo "Exiting loop"
+
+#Remove temp files - Exit 0 
+	rm -f m1 
+	rm -f m2
+	rm -f newmat2
+	rm -f temp1
+	rm -f temp2
+#Too many files - Error Exit 1
+else
+	echo "Too many files"
+	exit 1
+fi
+}
+
+
+datafile="datafile$$"
+if [ "$#" = "1" ]
+then
+	cat > "$datafile"
+	$1 "$datafile ${@:2}"
+elif [ "$#" = "2" ]
+then
+	datafile=$2
+	$1 "${@:2}"
+elif [ "$#" = "3" ]
+then
+	$1 "${@:2}"
+fi
